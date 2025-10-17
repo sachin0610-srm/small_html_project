@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Code Generator & Scanner 🔳</title>
+  <!-- Libraries: QR generation (qrcode) and QR scanning (html5-qrcode) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.6/minified/html5-qrcode.min.js"></script>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#06b6d4}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#071127 0%, #071b2a 100%);color:#e6eef6;margin:0;padding:28px}
+    .wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 420px;gap:20px}
+    header{grid-column:1/-1;margin-bottom:6px}
+    h1{margin:0 0 6px;font-size:20px}
+    p.lead{margin:0;color:var(--muted)}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], textarea, select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    textarea{min-height:80px;resize:vertical}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    button{background:var(--accent);color:#021022;border:0;padding:10px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .preview{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px}
+    #qrPreview{background:white;padding:12px;border-radius:8px}
+    small{color:var(--muted)}
+    .scanner-area{display:flex;flex-direction:column;gap:10px}
+    .camera-select{display:flex;gap:8px;align-items:center}
+    .muted{color:var(--muted);font-size:13px}
+    footer{grid-column:1/-1;margin-top:14px;color:var(--muted);font-size:13px}
+    @media(max-width:980px){.wrap{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>QR Code Generator & Scanner 🔳</h1>
+      <p class="lead">Generate QR codes and scan them directly from your browser. Scanner requires a secure context (serve over <code>http://localhost</code> or <code>https</code>).</p>
+    </header>
+
+    <!-- Generator -->
+    <section class="card">
+      <h2 style="margin-top:0;font-size:16px">Generate QR Code</h2>
+      <label for="textInput">Text / URL / Any content</label>
+      <textarea id="textInput" placeholder="Enter text or paste a URL...">https://example.com</textarea>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="flex:1">
+          <label for="size">Size (px)</label>
+          <select id="size">
+            <option value="128">128</option>
+            <option value="256" selected>256</option>
+            <option value="512">512</option>
+            <option value="1024">1024</option>
+          </select>
+        </div>
+        <div style="width:160px">
+          <label for="ec">Error correction</label>
+          <select id="ec">
+            <option value="L">L (lowest)</option>
+            <option value="M">M</option>
+            <option value="Q">Q</option>
+            <option value="H" selected>H (best)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="generateBtn">Generate</button>
+        <button id="downloadBtn" class="secondary">Download PNG</button>
+        <button id="copyBtn" class="secondary">Copy Image</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+
+      <div class="preview" style="margin-top:12px">
+        <div id="qrPreview" aria-live="polite">No QR generated yet</div>
+        <small class="muted">Tip: use "Download PNG" to save the QR or copy it to clipboard.</small>
+      </div>
+    </section>
+
+    <!-- Scanner -->
+    <aside class="card">
+      <h2 style="margin-top:0;font-size:16px">Scan QR Code</h2>
+      <div class="scanner-area">
+        <div class="camera-select">
+          <label for="cameraSelect">Camera</label>
+          <select id="cameraSelect" style="flex:1"></select>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button id="startScan">Start Scanner</button>
+          <button id="stopScan" class="secondary">Stop</button>
+        </div>
+
+        <div id="reader" style="width:100%;min-height:260px;border-radius:8px;overflow:hidden;background:#000"></div>
+
+        <div>
+          <label>Last scanned result</label>
+          <input type="text" id="scanResult" readonly placeholder="--">
+        </div>
+
+        <div><small class="muted">If camera list is empty or scanning doesn't start, run this file via Live Server (VS Code) or serve from localhost/https.</small></div>
+      </div>
+    </aside>
+
+    <footer class="muted">Built with <strong>qrcode</strong> + <strong>html5-qrcode</strong>. Works best when the page is served via <code>http://localhost</code> or over <code>https</code> for camera access.</footer>
+  </div>
+
+<script>
+// --- Helper functions ---
+const $ = id => document.getElementById(id);
+
+// GENERATOR
+const textInput = $('textInput');
+const sizeSelect = $('size');
+const ecSelect = $('ec');
+const generateBtn = $('generateBtn');
+const qrPreview = $('qrPreview');
+const downloadBtn = $('downloadBtn');
+const copyBtn = $('copyBtn');
+const clearBtn = $('clearBtn');
+let latestDataUrl = null;
+
+async function generateQR(){
+  const text = textInput.value.trim();
+  if(!text){qrPreview.innerHTML = 'Please enter text to generate QR.'; return}
+  const size = parseInt(sizeSelect.value,10);
+  const ecLevel = ecSelect.value;
+  qrPreview.innerHTML = 'Generating...';
+  try{
+    // qrcode library provides toDataURL
+    const dataUrl = await QRCode.toDataURL(text, {width:size, margin:1, errorCorrectionLevel: ecLevel});
+    latestDataUrl = dataUrl;
+    // show as image
+    qrPreview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = 'QR code';
+    img.width = Math.min(size,480);
+    qrPreview.appendChild(img);
+  }catch(err){
+    qrPreview.innerHTML = 'Error generating QR: '+err;
+    console.error(err);
+  }
+}
+
+generateBtn.addEventListener('click', generateQR);
+
+downloadBtn.addEventListener('click', () => {
+  if(!latestDataUrl){ alert('Generate a QR code first.'); return }
+  const a = document.createElement('a');
+  a.href = latestDataUrl;
+  a.download = 'qr-code.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+copyBtn.addEventListener('click', async () => {
+  if(!latestDataUrl){ alert('Generate a QR code first.'); return }
+  try{
+    const res = await fetch(latestDataUrl);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
+    alert('QR image copied to clipboard — paste into an image field or document.');
+  }catch(e){
+    alert('Copy failed. Your browser may not support clipboard image writes.');
+    console.error(e);
+  }
+});
+
+clearBtn.addEventListener('click', () => {
+  textInput.value = '';
+  qrPreview.innerHTML = 'No QR generated yet';
+  latestDataUrl = null;
+});
+
+// Scanner (html5-qrcode)
+const cameraSelect = $('cameraSelect');
+const startScanBtn = $('startScan');
+const stopScanBtn = $('stopScan');
+const scanResultInput = $('scanResult');
+const readerId = 'reader';
+let html5QrScanner = null;
+let currentCameraId = null;
+
+async function listCameras(){
+  cameraSelect.innerHTML = '';
+  try{
+    const devices = await Html5Qrcode.getCameras();
+    if(devices && devices.length){
+      devices.forEach((d,i)=>{
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.label || 'Camera '+(i+1);
+        cameraSelect.appendChild(opt);
+      });
+      cameraSelect.selectedIndex = 0;
+    } else {
+      const opt = document.createElement('option'); opt.textContent = 'No cameras found'; opt.value = '';
+      cameraSelect.appendChild(opt);
+    }
+  }catch(err){
+    console.warn('Could not list cameras', err);
+    const opt = document.createElement('option'); opt.textContent = 'Camera list unavailable'; opt.value = '';
+    cameraSelect.appendChild(opt);
+  }
+}
+
+async function startScanner(){
+  if(html5QrScanner){ return }
+  currentCameraId = cameraSelect.value || null;
+  if(!currentCameraId){ alert('No camera selected — try refreshing or run via localhost'); return }
+  html5QrScanner = new Html5Qrcode(readerId, /* verbose= */ false);
+  try{
+    await html5QrScanner.start(
+      { deviceId: { exact: currentCameraId } },
+      { fps: 10, qrbox: {width: 250, height: 250} },
+      (decodedText, decodedResult) => {
+        // success callback
+        scanResultInput.value = decodedText;
+        // optional: stop after first scan
+        // stopScanner();
+      }
+    );
+  }catch(err){
+    alert('Could not start camera: ' + (err.message || err));
+    console.error(err);
+    html5QrScanner = null;
+  }
+}
+
+async function stopScanner(){
+  if(!html5QrScanner) return;
+  try{
+    await html5QrScanner.stop();
+    html5QrScanner.clear();
+  }catch(e){ console.warn('stop error', e) }
+  html5QrScanner = null;
+}
+
+startScanBtn.addEventListener('click', startScanner);
+stopScanBtn.addEventListener('click', stopScanner);
+
+// init
+listCameras();
+
+// Try to refresh camera list when the select is clicked (helpful if permissions were granted after load)
+cameraSelect.addEventListener('click', listCameras);
+
+// Accessibility: generate on ctrl+enter
+textInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) generateQR(); });
+
+</script>
+</body>
+</html>

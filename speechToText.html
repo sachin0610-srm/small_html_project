@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Speech To Text 🔊</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background-color: #f5f5f5;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      transition: 0.3s;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    textarea {
+      width: 80%;
+      height: 200px;
+      padding: 15px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      resize: none;
+      outline: none;
+      background: white;
+      color: #222;
+    }
+
+    .buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    .start { background: #4caf50; color: white; }
+    .stop { background: #f44336; color: white; }
+    .copy { background: #2196f3; color: white; }
+    .clear { background: #ff9800; color: white; }
+    .download { background: #9c27b0; color: white; }
+    .darkmode { background: #333; color: #fff; }
+
+    /* Dark mode */
+    .dark {
+      background-color: #121212;
+      color: #f5f5f5;
+    }
+
+    .dark textarea {
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎤 Speech To Text Web App</h1>
+  <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
+
+  <div class="buttons">
+    <button class="start" id="startBtn">Start</button>
+    <button class="stop" id="stopBtn">Stop</button>
+    <button class="copy" id="copyBtn">Copy</button>
+    <button class="download" id="downloadBtn">Download TXT</button>
+    <button class="clear" id="clearBtn">Clear</button>
+    <button class="darkmode" id="darkModeBtn">Dark Mode</button>
+  </div>
+
+  <script>
+    const speechText = document.getElementById("speechText");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const darkModeBtn = document.getElementById("darkModeBtn");
+
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        speechText.value = transcript;
+      };
+
+      startBtn.onclick = () => recognition.start();
+      stopBtn.onclick = () => recognition.stop();
+    } else {
+      alert("Speech Recognition not supported in this browser.");
+    }
+
+    copyBtn.onclick = () => {
+      speechText.select();
+      document.execCommand("copy");
+      alert("Text copied!");
+    };
+
+    clearBtn.onclick = () => (speechText.value = "");
+
+    downloadBtn.onclick = () => {
+      const blob = new Blob([speechText.value], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "speech_text.txt";
+      link.click();
+    };
+
+    darkModeBtn.onclick = () => {
+      document.body.classList.toggle("dark");
+    };
+  </script>
+</body>
+</html>
